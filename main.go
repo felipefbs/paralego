@@ -57,6 +57,42 @@ func syncJob() {
 	fmt.Printf("%+v", countWords(c))
 }
 
+func contentAsync(url string, output chan<- string) error {
+	c, err := content(url)
+	if err != nil {
+		return err
+	}
+
+	output <- c
+
+	return nil
+}
+
+func countAsync(input <-chan string, output chan<- Counts) {
+	for c := range input {
+		output <- countWords(c)
+	}
+
+	close(output)
+}
+
+func asyncJob() {
+	size := 1000
+
+	q := make(chan string, size)
+	o := make(chan Counts, size)
+
+	for i := 0; i < size*2; i++ {
+		go contentAsync(url, q)
+	}
+
+	go countAsync(q, o)
+
+	for i := 0; i < size*2; i++ {
+		fmt.Println(len(<-o))
+	}
+}
+
 func main() {
-	syncJob()
+	asyncJob()
 }
